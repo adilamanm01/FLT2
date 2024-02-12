@@ -1,84 +1,57 @@
 import sys
 
 def MinDFSM(alphabets, transitions, final_states):
+    # Initialize the classes A (accepting states) and K-A (non-accepting states)
     A = set(final_states)
     K_A = set(range(1, len(transitions) + 1)) - A
     classes = [A, K_A] if K_A else [A]
 
     def state_goes_to(state, symbol):
+        # Find the transition for a state given an input symbol
         symbol_index = alphabets.index(symbol)
-        return transitions[state - 1][symbol_index]
-
-    def find_class(state, classes):
-        for c in classes:
-            if state in c:
-                return c
-        return None
+        transition = transitions[state - 1][symbol_index]
+        return transition if transition != 0 else None
 
     def refine(classes):
         new_classes = []
         for e in classes:
-            if len(e) > 1:
-                temp_classes = {}
-                for state in e:
-                    for symbol in alphabets:
-                        destination_class = find_class(state_goes_to(state, symbol), classes)
-                        destination_class_key = frozenset(destination_class) if destination_class else frozenset()
-                        if destination_class_key not in temp_classes:
-                            temp_classes[destination_class_key] = set()
-                        temp_classes[destination_class_key].add(state)
-                new_classes.extend([set(group) for group in temp_classes.values()])
-            else:
-                new_classes.append(e)
-        return new_classes
+            # Use a dictionary to group states by their transition outcomes for each symbol
+            temp_classes = {}
+            for state in e:
+                state_signature = tuple((symbol, state_goes_to(state, symbol)) for symbol in alphabets)
+                temp_classes.setdefault(state_signature, set()).add(state)
+            new_classes.extend(temp_classes.values())
+        return [set(c) for c in new_classes if c]
 
     while True:
         new_classes = refine(classes)
+        # Convert classes to a comparable format (list of frozensets) to check for changes
         if set(map(frozenset, new_classes)) == set(map(frozenset, classes)):
             break
         classes = new_classes
 
-    return classes
+    # Format the output to display each class as a list
+    minimized_classes_formatted = [sorted(list(c)) for c in classes]
+    minimized_classes_formatted.sort(key=lambda x: x[0])  # Sort by the first state in each class for readability
 
+    return minimized_classes_formatted
 
+def display_dfsm(alphabets, minimized_classes, transitions, final_states):
+    print("alphabets :", " ".join(alphabets))
+    print("\ntransitions")
+    for cls in minimized_classes:
+        transition_summary = {}
+        for state in cls:
+            for symbol_index, symbol in enumerate(alphabets):
+                next_state = transitions[state-1][symbol_index]
+                if next_state != 0:  # Ignore transitions to state 0 (nonexistent)
+                    transition_summary[symbol] = next_state
+        # Format and print the transition summary for the current class
+        if transition_summary:
+            trans_str = " ".join(f"{target}" for symbol, target in transition_summary.items())
+            print(f"[{' '.join(map(str, cls))}] : {trans_str}")
 
-
-def eps(transitions, q, epsilon_symbol, alphabets):
-    """
-    Compute the epsilon closure of a state q in a finite automaton.
-    Assumes states are 1-indexed in the automaton and maps them to a 0-indexed array.
-
-    :param transitions: A list of lists representing the state transitions.
-    :param q: The state (1-indexed) for which to compute the epsilon closure.
-    :param epsilon_symbol: The symbol in the alphabets list representing epsilon transitions.
-    :param alphabets: The list of alphabet symbols.
-    :return: A set containing the epsilon closure of the given state.
-    """
-    epsilon_index = alphabets.index(epsilon_symbol)  # Find the index of epsilon in alphabets
-    q_index = q - 1  # Adjust for 0-indexed array
-    closure = {q}  # Initialize closure with state q itself
-
-    # List to keep track of states to explore
-    states_to_explore = [q_index]
-
-    while states_to_explore:
-        current_state = states_to_explore.pop()
-        epsilon_transitions = transitions[current_state][epsilon_index]
-
-        # Handle both list of transitions and single transition (non-zero integer)
-        if epsilon_transitions != 0:
-            # Ensure epsilon_transitions is a list for consistency
-            epsilon_transitions = epsilon_transitions if isinstance(epsilon_transitions, list) else [epsilon_transitions]
-
-            for state in epsilon_transitions:
-                state_1_indexed = state  # State is 1-indexed
-                if state_1_indexed not in closure:
-                    closure.add(state_1_indexed)
-                    states_to_explore.append(state - 1)  # Adjust for 0-indexed array
-
-    return closure
-
-
+    print("\nfinal states :", " ".join(map(str, final_states)))
 
 def parse_file(file_name):
     with open(file_name, 'r') as file:
@@ -141,5 +114,4 @@ if __name__ == "__main__":
     print("Minimized Classes:", minimized_classes)
 
 
-
-
+    display_dfsm(alphabets, minimized_classes, transitions, final_states)
