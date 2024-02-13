@@ -14,44 +14,74 @@ def MinDFSM(alphabets, transitions, final_states):
 
     def refine(classes):
         new_classes = []
+        # Create a mapping from state to its current class
+        state_to_class_mapping = {}
+        for cls_index, cls in enumerate(classes):
+            for state in cls:
+                state_to_class_mapping[state] = cls_index
+
         for e in classes:
-            # Use a dictionary to group states by their transition outcomes for each symbol
             temp_classes = {}
             for state in e:
-                state_signature = tuple((symbol, state_goes_to(state, symbol)) for symbol in alphabets)
+                # Adjust to capture state transitions as transitions to classes
+                state_signature = tuple(state_to_class_mapping[state_goes_to(state, symbol)] if state_goes_to(state, symbol) in state_to_class_mapping else None for symbol in alphabets)
                 temp_classes.setdefault(state_signature, set()).add(state)
             new_classes.extend(temp_classes.values())
         return [set(c) for c in new_classes if c]
 
     while True:
         new_classes = refine(classes)
-        # Convert classes to a comparable format (list of frozensets) to check for changes
         if set(map(frozenset, new_classes)) == set(map(frozenset, classes)):
             break
         classes = new_classes
 
-    # Format the output to display each class as a list
     minimized_classes_formatted = [sorted(list(c)) for c in classes]
-    minimized_classes_formatted.sort(key=lambda x: x[0])  # Sort by the first state in each class for readability
+    minimized_classes_formatted.sort(key=lambda x: x[0])
 
     return minimized_classes_formatted
 
+
 def display_dfsm(alphabets, minimized_classes, transitions, final_states):
     print("alphabets :", " ".join(alphabets))
-    print("\ntransitions")
-    for cls in minimized_classes:
-        transition_summary = {}
+    
+    # Assigning new numerical state IDs to minimized classes
+    class_to_new_state = {frozenset(cls): i + 1 for i, cls in enumerate(minimized_classes)}
+    
+    # Initialize new transitions dictionary
+    new_transitions = {i+1: {} for i in range(len(minimized_classes))}
+    
+    # Mapping transitions of old states to new state IDs
+    for cls_index, cls in enumerate(minimized_classes):
+        new_state = cls_index + 1
         for state in cls:
             for symbol_index, symbol in enumerate(alphabets):
-                next_state = transitions[state-1][symbol_index]
-                if next_state != 0:  # Ignore transitions to state 0 (nonexistent)
-                    transition_summary[symbol] = next_state
-        # Format and print the transition summary for the current class
-        if transition_summary:
-            trans_str = " ".join(f"{target}" for symbol, target in transition_summary.items())
-            print(f"[{' '.join(map(str, cls))}] : {trans_str}")
+                original_transition = transitions[state-1][symbol_index]
+                if original_transition != 0:
+                    for target_cls_index, target_cls in enumerate(minimized_classes):
+                        if original_transition in target_cls:
+                            new_target_state = target_cls_index + 1
+                            new_transitions[new_state][symbol] = new_target_state
+    
+    # Print the new transitions
+    print("\ntransitions")
+    for state, symbol_to_state in new_transitions.items():
+        for symbol, target_state in symbol_to_state.items():
+            print(f"[{state}] : {symbol} {target_state}")
+    
+    # Updating final states based on minimized classes
+    new_final_states = set()
+    for cls_index, cls in enumerate(minimized_classes):
+        # Correctly convert cls to a set before intersection
+        if set(cls).intersection(set(final_states)):  # Use intersection method for clarity
+            new_final_states.add(cls_index + 1)
 
-    print("\nfinal states :", " ".join(map(str, final_states)))
+    
+    print("\nfinal states :", " ".join(map(str, sorted(new_final_states))))
+
+# This modified display_dfsm function now correctly maps minimized classes to new state IDs,
+# updates transitions according to these new IDs, and accurately identifies the new final states.
+
+
 
 def parse_file(file_name):
     with open(file_name, 'r') as file:
