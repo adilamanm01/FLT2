@@ -43,8 +43,10 @@ def MinDFSM(alphabets, transitions, final_states):
 
 def display_dfsm(alphabets, minimized_classes, transitions, final_states):
     with open(file2_path, 'w') as file:
-        output = "\nalphabets : " + " ".join(alphabets) + "\n"
+        output = " ".join(alphabets) + "\n"
+        print("\n")
         print(output.strip())
+        print("\n")
         file.write(output)
         
         # Assigning new numerical state IDs to minimized classes
@@ -54,7 +56,7 @@ def display_dfsm(alphabets, minimized_classes, transitions, final_states):
         new_transitions = {i+1: {} for i in range(len(minimized_classes))}
         
         # Mapping transitions of old states to new state IDs
-        output = "\ntransitions\n"
+        output = "\n"
         for cls_index, cls in enumerate(minimized_classes):
             new_state = cls_index + 1
             for state in cls:
@@ -69,7 +71,7 @@ def display_dfsm(alphabets, minimized_classes, transitions, final_states):
         # Writing and printing the new transitions in the desired format
         for state, transitions_dict in new_transitions.items():
             transition_list = [str(transitions_dict[symbol] if transitions_dict[symbol] is not None else state) for symbol in alphabets]
-            line = f"[{state}] : {' '.join(transition_list)}\n"
+            line = f"{' '.join(transition_list)}\n"
             print(line.strip())
             output += line
         
@@ -81,7 +83,8 @@ def display_dfsm(alphabets, minimized_classes, transitions, final_states):
             if set(cls).intersection(set(final_states)):
                 new_final_states.add(cls_index + 1)
 
-        output = "\nfinal states : " + " ".join(map(str, sorted(new_final_states))) + "\n"
+        output = "\n" + " ".join(map(str, sorted(new_final_states))) + "\n"
+        print("\n")
         print(output.strip())
         file.write(output)
 
