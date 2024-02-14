@@ -145,6 +145,33 @@ if __name__ == "__main__":
 
 
     alphabets, transitions, final_states = parse_file(file1_path)
+
+    alphalength=len(alphabets)
+    translength=len(transitions)
+
+    print(alphalength,"\n")
+    print(translength,"\n")
+
+    for i in range(translength):
+        if len(transitions[i])!= alphalength:
+            print("Invalid DFSM")
+            exit(1)
+
+    # Iterate through each row and each integer in the transitions matrix
+    for i in range(translength):
+        for j in range(len(transitions[i])):  # Assuming alphalength is the length of a row, which is 2 in your example
+            if transitions[i][j] > translength:
+                print(f"Error: Integer {transitions[i][j]} at transitions[{i}][{j}] is not <= {translength}")
+                sys.exit("DFSM Invalid.")
+
+    for i in range(len(final_states)):
+        if final_states[i] > translength:
+            print("Invalid DFSM..")
+            exit(1)
+
+    
+    
+
     print(alphabets,transitions,final_states,end="\n")
 
     # Now, call the MinDFSM function with the parsed data
