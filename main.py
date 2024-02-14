@@ -42,44 +42,48 @@ def MinDFSM(alphabets, transitions, final_states):
 
 
 def display_dfsm(alphabets, minimized_classes, transitions, final_states):
-    print("alphabets :", " ".join(alphabets))
-    
-    # Assigning new numerical state IDs to minimized classes
-    class_to_new_state = {frozenset(cls): i + 1 for i, cls in enumerate(minimized_classes)}
-    
-    # Initialize new transitions dictionary
-    new_transitions = {i+1: {} for i in range(len(minimized_classes))}
-    
-    # Mapping transitions of old states to new state IDs
-    for cls_index, cls in enumerate(minimized_classes):
-        new_state = cls_index + 1
-        for state in cls:
-            for symbol_index, symbol in enumerate(alphabets):
-                original_transition = transitions[state-1][symbol_index]
-                if original_transition != 0:
-                    for target_cls_index, target_cls in enumerate(minimized_classes):
-                        if original_transition in target_cls:
-                            new_target_state = target_cls_index + 1
-                            new_transitions[new_state][symbol] = new_target_state
-    
-    # Print the new transitions
-    print("\ntransitions")
-    for state, symbol_to_state in new_transitions.items():
-        for symbol, target_state in symbol_to_state.items():
-            print(f"[{state}] : {symbol} {target_state}")
-    
-    # Updating final states based on minimized classes
-    new_final_states = set()
-    for cls_index, cls in enumerate(minimized_classes):
-        # Correctly convert cls to a set before intersection
-        if set(cls).intersection(set(final_states)):  # Use intersection method for clarity
-            new_final_states.add(cls_index + 1)
+    with open(file2_path, 'w') as file:
+        output = "\nalphabets : " + " ".join(alphabets) + "\n"
+        print(output.strip())
+        file.write(output)
+        
+        # Assigning new numerical state IDs to minimized classes
+        class_to_new_state = {frozenset(cls): i + 1 for i, cls in enumerate(minimized_classes)}
+        
+        # Initialize new transitions dictionary
+        new_transitions = {i+1: {} for i in range(len(minimized_classes))}
+        
+        # Mapping transitions of old states to new state IDs
+        output = "\ntransitions\n"
+        for cls_index, cls in enumerate(minimized_classes):
+            new_state = cls_index + 1
+            for state in cls:
+                for symbol_index, symbol in enumerate(alphabets):
+                    original_transition = transitions[state-1][symbol_index]
+                    if original_transition != 0:
+                        for target_cls_index, target_cls in enumerate(minimized_classes):
+                            if original_transition in target_cls:
+                                new_target_state = target_cls_index + 1
+                                new_transitions[new_state][symbol] = new_target_state
+        
+        # Writing and printing the new transitions in the desired format
+        for state, transitions_dict in new_transitions.items():
+            transition_list = [str(transitions_dict[symbol] if transitions_dict[symbol] is not None else state) for symbol in alphabets]
+            line = f"[{state}] : {' '.join(transition_list)}\n"
+            print(line.strip())
+            output += line
+        
+        file.write(output)
+        
+        # Updating final states based on minimized classes
+        new_final_states = set()
+        for cls_index, cls in enumerate(minimized_classes):
+            if set(cls).intersection(set(final_states)):
+                new_final_states.add(cls_index + 1)
 
-    
-    print("\nfinal states :", " ".join(map(str, sorted(new_final_states))))
-
-# This modified display_dfsm function now correctly maps minimized classes to new state IDs,
-# updates transitions according to these new IDs, and accurately identifies the new final states.
+        output = "\nfinal states : " + " ".join(map(str, sorted(new_final_states))) + "\n"
+        print(output.strip())
+        file.write(output)
 
 
 
@@ -128,11 +132,12 @@ def parse_file(file_name):
     return alphabets, transitions, final_states
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         print("Command line path is wrong")
         sys.exit(1)
 
     file1_path = sys.argv[1]
+    file2_path = sys.argv[2]
 
 
 
