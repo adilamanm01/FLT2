@@ -7,18 +7,22 @@ def remove_unreachable_states(transitions, final_states):
     while new_reachables_found:
         new_reachables_found = False
         for state in list(reachable_states):
-            for transition in transitions[state-1]:  # -1 for 0-based index
+            for transition in transitions[state-1]:  # Assume transitions[state-1] is valid
                 if transition not in reachable_states and transition != 0:
                     reachable_states.add(transition)
                     new_reachables_found = True
 
-    # Filter out unreachable transitions
-    filtered_transitions = [transitions[i-1] for i in reachable_states if i-1 < len(transitions)]
+    # Map old state numbers to new state numbers
+    state_mapping = {old: new for new, old in enumerate(sorted(reachable_states), start=1)}
+
+    # Apply mapping to transitions
+    filtered_transitions = [transitions[old-1] for old in sorted(reachable_states)]
     
-    # Update final states to include only reachable states
-    filtered_final_states = [state for state in final_states if state in reachable_states]
+    # Apply mapping to final states
+    filtered_final_states = [state_mapping[state] for state in final_states if state in reachable_states]
     
-    return filtered_transitions, filtered_final_states
+    return filtered_transitions, filtered_final_states, state_mapping
+
 
 
 def MinDFSM(alphabets, transitions, final_states):
@@ -180,6 +184,18 @@ def parse_file(file_name):
 
     return alphabets, transitions, final_states
 
+def state_goes_to(state, symbol, state_mapping):
+    # Adjust state number according to mapping
+    if state in state_mapping:
+        mapped_state = state_mapping[state]
+        symbol_index = alphabets.index(symbol)
+        transition = transitions[mapped_state - 1][symbol_index]
+        return transition if transition != 0 else None
+    else:
+        return None
+
+# Adjust function calls accordingly
+# For example, in MinDFSM or any function using state_goes_to, pass the state_mapping as an argument
 
 
 if __name__ == "__main__":
@@ -243,10 +259,11 @@ if __name__ == "__main__":
         print(alphabets,transitions,final_states,end="\n")
 
 
-        # Removing unreachable states and updating transitions and final states
-        transitions, final_states = remove_unreachable_states(transitions, final_states)
+        # Inside your main logic where you call remove_unreachable_states
+        transitions, final_states, state_mapping = remove_unreachable_states(transitions, final_states)
 
-        print("After removing Unrechable :",alphabets,transitions,final_states,end="\n")
+
+        print("After removing Unrechable :","alphabeets:",alphabets,"\ntransitions : ",transitions,"\nfinal states :",final_states,)
 
         # Now, call the MinDFSM function with the parsed data
         minimized_classes = MinDFSM(alphabets, transitions, final_states)
