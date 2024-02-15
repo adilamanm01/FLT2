@@ -166,42 +166,61 @@ def parse_file(file_name):
         print("The file is empty.")
         sys.exit(1)  # Exit the program with an error status 1 if the file is empty.
 
-    # Initialize lists
-    alphabets = []  # List to store alphabets used in the finite state machine.
-    transitions = []  # List to store transitions between states.
-    final_states = []  # List to store final (accepting) states.
+     # Remove any leading empty lines before the alphabets section
+    while lines and lines[0].strip() == '':
+        lines.pop(0)
+     # Remove the first line if it is empty
 
-    # Process alphabets
-    alphabets = lines[0].split()  # Split the first line by whitespace to get the alphabet.
+    # Re-check if the file is empty after removing leading empty lines
+    if not lines:
+        print("The file is empty after removing leading empty lines.")
+        sys.exit(1)
 
-    # Process transitions
-    index = 2  # Start processing transitions from the third line (index 2).
-    while index < len(lines):  # Loop through the lines starting from the third.
-        line = lines[index]  # Get the current line.
-        index += 1  # Increment the index to move to the next line.
+    alphabets = []
+    transitions = []
+    final_states = []
+    section = 'alphabets'  # Track current section being processed
+    consecutive_empty_lines = 0  # Track consecutive empty lines
+    seen_sections = {'alphabets': False, 'transitions': False, 'final_states': False}  # Track seen sections
 
-        if line.strip() == '':  # Check if the line is empty (a blank line).
-            break  # Stop processing transitions if an empty line is found.
+    for line in lines:
+        stripped_line = line.strip()
 
-        parts = line.strip().split(' ')  # Split the line into parts based on whitespace.
-        transition_row = []  # List to store transitions for a single state.
-        for part in parts:  # Loop through each part in the line.
-            if part == '[]':  # Check if the part represents an empty transition.
-                transition_row.append(0)  # Use 0 to represent an empty transition.
-            else:
-                # Convert the string within brackets to a list of integers.
-                numbers = [int(x) for x in part.strip('[]').split(',')]
-                # If there is more than one number, store it as a list; otherwise, store just the number.
-                transition_row.append(numbers if len(numbers) > 1 else numbers[0])
-        transitions.append(transition_row)  # Add the transitions for this state to the main list.
+        if stripped_line:  # If the line is not empty
+            if section == 'alphabets' and not seen_sections['alphabets']:
+                alphabets = stripped_line.split()
+                section = 'transitions'
+                seen_sections['alphabets'] = True
+            elif section == 'transitions':
+                transitions.append([int(x) for x in stripped_line.split()])
+                seen_sections['transitions'] = True
+            elif section == 'final_states':
+                final_states.extend([int(x) for x in stripped_line.split()])
+                seen_sections['final_states'] = True
+            consecutive_empty_lines = 0  # Reset on non-empty line
+        else:  # Empty line
+            consecutive_empty_lines += 1
+            if consecutive_empty_lines > 1:
+                print("Error: More than one consecutive empty line detected.")
+                sys.exit(1)
+            if seen_sections['transitions'] and not seen_sections['final_states']:
+                if section != 'final_states':  # Transition from transitions to final_states
+                    section = 'final_states'
+                else:
+                    # If already in final_states and another empty line is found, it's an error
+                    print("Error: Incorrect structure with extra empty lines.")
+                    sys.exit(1)
 
-    # Process final states (start from the line after the empty line)
-    for line in lines[index:]:  # Loop through the remaining lines to process final states.
-        # Split the line by whitespace and convert each part to an integer, then extend the final_states list with these integers.
-        final_states.extend([int(x) for x in line.split()])
+    # Validate the structure
+    if not seen_sections['alphabets'] or not seen_sections['transitions'] or not seen_sections['final_states']:
+        print("Error: File structure is incomplete or incorrect.")
+        sys.exit(1)
 
-    return alphabets, transitions, final_states  # Return the processed data.
+    return alphabets, transitions, final_states
 
+
+
+    
 def state_goes_to(state, symbol, state_mapping):
     # Adjust state number according to mapping
     if state in state_mapping:  # Check if the current state has a mapping.
