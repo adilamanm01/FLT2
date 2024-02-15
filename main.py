@@ -1,5 +1,26 @@
 import sys
 
+def remove_unreachable_states(transitions, final_states):
+    reachable_states = {1}
+    new_reachables_found = True
+
+    while new_reachables_found:
+        new_reachables_found = False
+        for state in list(reachable_states):
+            for transition in transitions[state-1]:  # -1 for 0-based index
+                if transition not in reachable_states and transition != 0:
+                    reachable_states.add(transition)
+                    new_reachables_found = True
+
+    # Filter out unreachable transitions
+    filtered_transitions = [transitions[i-1] for i in reachable_states if i-1 < len(transitions)]
+    
+    # Update final states to include only reachable states
+    filtered_final_states = [state for state in final_states if state in reachable_states]
+    
+    return filtered_transitions, filtered_final_states
+
+
 def MinDFSM(alphabets, transitions, final_states):
     # Initialize the classes A (accepting states) and K-A (non-accepting states)
     A = set(final_states)
@@ -46,71 +67,72 @@ def MinDFSM(alphabets, transitions, final_states):
 
 def display_dfsm(alphabets, minimized_classes, transitions, final_states):
     with open(file2_path, 'w') as file:
-        output = " ".join(alphabets) + "\n"
-        print("\n")
+        output = " ".join(alphabets) + "\n\n"
+        
+        # Initialize new_transitions with default self-transitions for each state
+        new_transitions = {}
+        for i in range(1, len(minimized_classes) + 1):
+            new_transitions[i] = {symbol: i for symbol in alphabets}
+        
+        # Adjust new_transitions based on the minimization results
+        state = 1
+        for cls in minimized_classes:
+            for symbol in alphabets:
+                symbol_index = alphabets.index(symbol)
+                transition_states = set()
+                for orig_state in cls:
+                    transition_state = transitions[orig_state-1][symbol_index]
+                    transition_states.add(transition_state)
+                
+                # For simplicity, assuming single transition state per symbol, adjust as necessary
+                    if transition_states:
+                        # Find the new state number for the transition state
+                        new_state_index = 1  # Start the new state numbering from 1
+                        for trans_state in transition_states:
+                            found = False  # Flag to check if the transition state is found in minimized classes
+                            for new_cls in minimized_classes:
+                                if trans_state in new_cls:
+                                    new_transitions[state][symbol] = new_state_index
+                                    found = True
+                                    break  # Break inner loop if transition state is found
+                                new_state_index += 1  # Increment new state number after checking each class
+                            if found:
+                                break  # Break outer loop if transition state is found
+                            new_state_index = 1  # Reset the new state index for the next symbol's transition state
+
+            state += 1
+        
+        # Writing to file and printing
+        for state in range(1, len(new_transitions) + 1):
+            trans_dict = new_transitions[state]
+            trans_line = ' '.join(str(trans_dict[s]) for s in alphabets)
+            output_line = f"{trans_line}\n"
+            output += output_line
+        
+        # Initialize the set to hold new final states
+        new_final_states_set = set()
+
+        # Manually manage new state numbers
+        new_state = 1
+        for cls in minimized_classes:
+            for original_final_state in final_states:
+                if original_final_state in cls:
+                    new_final_states_set.add(new_state)
+                    break  # Once the final state is found in a class, no need to check other classes for this state
+            new_state += 1  # Increment the new state number for the next class
+
+
+        minimized_final_states = sorted(list(new_final_states_set))
+        
+        # Existing output formatting logic for transitions
+        
+        # Adjust output for final states to reflect minimized states
+        final_states_output = " ".join(map(str, minimized_final_states))
+        output += "\n" + final_states_output + "\n"
+        
         print(output.strip())
-        print("\n")
         file.write(output)
-        
-        # Initialize an empty dictionary for mapping classes to new state IDs
-        class_to_new_state = {}
-        cls_index = 1  # Start indexing from 1 since state numbering begins from 1
 
-        for cls in minimized_classes:
-            class_to_new_state[frozenset(cls)] = cls_index
-            cls_index += 1  # Increment the index manually for each class
-
-        
-        # Initialize new transitions dictionary
-        new_transitions = {i+1: {} for i in range(len(minimized_classes))}
-        
-        # Initialize a variable for output string accumulation
-        output = "\n"
-
-        # Manually manage the index for cls_index starting from 1
-        cls_index = 1
-        for cls in minimized_classes:
-            new_state = cls_index  # Use the manually managed index for new_state
-            for state in cls:
-                symbol_index = 0  # Initialize symbol_index manually
-                for symbol in alphabets:
-                    original_transition = transitions[state-1][symbol_index]
-                    if original_transition != 0:
-                        # Manually manage the index for target_cls_index starting from 1
-                        target_cls_index = 1
-                        for target_cls in minimized_classes:
-                            if original_transition in target_cls:
-                                new_target_state = target_cls_index  # Use the manually managed index for new_target_state
-                                new_transitions[new_state][symbol] = new_target_state
-                                break  # Exit the loop once the matching target class is found
-                            target_cls_index += 1  # Increment the target_cls_index manually
-                    symbol_index += 1  # Increment the symbol_index manually after each iteration
-            cls_index += 1  # Increment the cls_index manually
-
-
-        
-        # Writing and printing the new transitions in the desired format
-        for state, transitions_dict in new_transitions.items():
-            transition_list = [str(transitions_dict[symbol] if transitions_dict[symbol] is not None else state) for symbol in alphabets]
-            line = f"{' '.join(transition_list)}\n"
-            print(line.strip())
-            output += line
-        
-        file.write(output)
-        
-        # Updating final states based on minimized classes
-        new_final_states = set()
-        new_final_states = set()
-        cls_index = 1  # Start indexing from 1 since state numbering begins from 1
-        for cls in minimized_classes:
-            if set(cls).intersection(set(final_states)):
-                new_final_states.add(cls_index)
-            cls_index += 1  # Increment the index manually
-
-        output = "\n" + " ".join(map(str, sorted(new_final_states))) + "\n"
-        print("\n")
-        print(output.strip())
-        file.write(output)
 
 
 
@@ -161,7 +183,7 @@ def parse_file(file_name):
 
 
 if __name__ == "__main__":
-    try:
+    # try:
         if len(sys.argv) != 3:
             print("Command line path is wrong")
             sys.exit(1)
@@ -220,6 +242,12 @@ if __name__ == "__main__":
         
         print(alphabets,transitions,final_states,end="\n")
 
+
+        # Removing unreachable states and updating transitions and final states
+        transitions, final_states = remove_unreachable_states(transitions, final_states)
+
+        print("After removing Unrechable :",alphabets,transitions,final_states,end="\n")
+
         # Now, call the MinDFSM function with the parsed data
         minimized_classes = MinDFSM(alphabets, transitions, final_states)
         print("Minimized Classes:", minimized_classes)
@@ -229,8 +257,8 @@ if __name__ == "__main__":
 
 
         # print(len(alphabets[0]))
-    except Exception as e:
-        # This catches any exception raised during the execution of the script
-        print(f"Invalid DFSM")
-        # Optionally, exit the script with a non-zero exit code to indicate an error
-        sys.exit(1)
+    # except Exception as e:
+        # # This catches any exception raised during the execution of the script
+        # print(f"Invalid DFSM")
+        # # Optionally, exit the script with a non-zero exit code to indicate an error
+        # sys.exit(1)
